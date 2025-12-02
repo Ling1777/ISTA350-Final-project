@@ -7,6 +7,8 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 import re
+import numpy as np
+import statsmodels.api as sm
 
 # grab the data from Wikipedia
 def get_data(url):
@@ -24,7 +26,7 @@ def clean_temp_value(x):
     match = re.search(r"[-+]?\d*\.\d+|[-+]?\d+", x)
     return float(match.group()) if match else None
 
-# claen the data
+# clean the data
 def clean_data(df):
     months = ["Jan","Feb","Mar","Apr","May","Jun",
               "Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -54,22 +56,35 @@ def plot1(tucson_df):
     plt.ylabel("Temperature (°C)",size=20)
     plt.legend(['Tucson temperature','Tucson average temperature(year)'])
 
-# the data for the plot2--the Jan&Jul data of all the United States city shown in this North America DataFrame
+# the data for the plot2--the Jan&Jul data of all the United States cities shown in this North America DataFrame
 def plot2_data(df):
     United_States_df = df[df["Country"].str.contains("United States", case=False)]
     return  United_States_df[['City', 'Jan', 'Jul']]
 
 # plot2
-def plot2(United_States_df):
-    x = United_States_df["City"]
-    y1 = United_States_df["Jul"]
-    y2 = United_States_df["Jan"]
-    height = y1 - y2
-    plt.bar(x, height, bottom=y2, color="orange")
-    plt.xticks(rotation=90,size=10)
-    plt.yticks(range(0,37),size=10)
-    plt.ylabel("Temperature (°C)",size=20)
-    plt.title("Comparing Winter(Jan) and Summer(Jul) Temperatures Across U.S. Cities",size=20)
+def plot2(df):
+    x = df["Jan"].astype(float)
+    y = df["Jul"].astype(float)
+
+    X = sm.add_constant(x)
+    model = sm.OLS(y,X)
+    results = model.fit()
+    slope = results.params["Jan"]
+    intercept = results.params["const"]
+    predicted = slope*x+intercept
+
+    # Scatter points
+    plt.scatter(x, y, alpha=0.5, s = 500, color = "orange")
+
+    # Regression line
+    plt.plot(x, predicted, color="red", linewidth='2')
+
+    plt.title("Comparing Winter(Jan) and Summer(Jul) Temperatures Across U.S. Cities",size=25)
+
+    plt.xlabel("January Temperature (°C)", size=20)
+    plt.ylabel("July Temperature (°C)", size=20)
+  
+   
 
 # data for plot3
 def plot3_data(df):
@@ -79,6 +94,7 @@ def plot3_data(df):
 # plot3
 def plot3(df):
     x = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    
     # Washington subplot--humid subtropical climate
     Washington_df = df[df["City"].str.contains("Washington", case=False)]
     y1 = Washington_df[x].iloc[0]
@@ -137,6 +153,7 @@ def plot3(df):
 
 
 
+
 def main():
     # URL
     url = 'https://en.wikipedia.org/wiki/List_of_cities_by_average_temperature#North_America'
@@ -163,7 +180,8 @@ def main():
     # plot3
     plot3(US_data)
     plt.show()
-   
+
+
 if __name__ == '__main__':
     main()
 
